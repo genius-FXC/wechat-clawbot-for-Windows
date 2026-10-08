@@ -1,0 +1,15 @@
+import fs from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import {spawnSync} from 'node:child_process';
+const work=fileURLToPath(new URL('../.build/work/',import.meta.url)),file=new URL('../.build/work/test/codex-bridge.mjs',import.meta.url);
+let source=await fs.readFile(new URL('../../test/codex-bridge.mjs',import.meta.url),'utf8');
+source='import {randomUUID} from "node:crypto";\n'+source;
+let sockets=0;
+source=source.replace(/const socketPath = join\(dir, "[^"]+\.sock"\);/g,match=>{sockets++;return 'const socketPath = process.platform === "win32" ? '+JSON.stringify('\\\\.\\pipe\\clawbot-test-')+' + randomUUID() : '+match.slice('const socketPath = '.length);});
+if(sockets!==3)throw Error('Expected three upstream IPC fixtures');
+if(!source.includes('join(dir, `codex-${state}`)'))throw Error('Mock executable anchor changed');
+source=source.replace('join(dir, `codex-${state}`)','join(dir, `codex-${state}.mjs`)');
+source=source.replace('normalizeConfig({ codexTransport: "unknown" }).codexTransport, "socket"','normalizeConfig({ codexTransport: "unknown" }).codexTransport, "stdio"');
+await fs.writeFile(file,source);
+const result=spawnSync(process.execPath,['--test','test/codex-bridge.mjs'],{cwd:work,stdio:'inherit',windowsHide:true});
+process.exitCode=result.status??1;
