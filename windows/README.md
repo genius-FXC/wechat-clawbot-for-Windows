@@ -1,6 +1,8 @@
 # wechat-clawbot & for Windows
 
-独立 Windows 适配层，基于 `feat/codex-wechat-bridge`。原始 `src/`、`package.json`、脚本和测试保持不变；平台适配位于 `windows/`，性格、记忆和主动互动扩展位于 `extensions/`，构建时集成到生成副本。
+独立 Windows 适配层，当前同步上游 `main` 的 `1.3.0`，Windows 包版本为 `1.3.0-windows.1`。原始 `src/`、`package.json`、脚本和测试与 `windows/upstream.json` 固定的上游提交一致；平台适配位于 `windows/`，性格、记忆、主动互动和论文扩展位于 `extensions/`，构建时集成到生成副本。
+
+本次保留连续消息合并回复、发送失败暂存/后续补发、DSH 会话互通、统一通知、实例去重和时间上下文改进。macOS 原生日历、紧急闹钟和全天候秘书仅保留原始实现，在 Windows 默认不启用，状态与操作接口明确说明不支持；没有为它们提供 Windows 替代服务。
 
 ## 构建与验证
 
@@ -12,6 +14,7 @@
 cd windows
 npm ci --ignore-scripts
 npm test
+npm run test:upstream
 npm run doctor
 npm run pack
 ```

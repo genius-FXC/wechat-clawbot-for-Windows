@@ -37,6 +37,14 @@ test('Shared mode accepts local named pipes and rejects ordinary Windows files',
  validateSocket('\\\\.\\pipe\\codex-test');assert.throws(()=>validateSocket('C:\\tmp\\rpc.sock'),/named pipe/);assert.throws(()=>validateSocket('\\\\remote\\pipe\\codex'),/named pipe/);
 });
 test('Codex override preserved',()=>assert.equal(findTool('codex','C:\\Program Files\\Codex\\codex.exe'),'C:\\Program Files\\Codex\\codex.exe'));
+
+test('Windows prefers the native Claude install over an older npm entry without executing either',{skip:process.platform!=='win32'},async()=>{
+ const root=path.resolve('.build/claude-discovery-tests');await fs.mkdir(root,{recursive:true});const home=await fs.mkdtemp(path.join(root,'run-'));
+ const saved={USERPROFILE:process.env.USERPROFILE,PATH:process.env.PATH,APPDATA:process.env.APPDATA};
+ try{const native=path.join(home,'.local/bin/claude.exe'),npm=path.join(home,'npm'),pkg=path.join(npm,'node_modules/@anthropic-ai/claude-code');await fs.mkdir(path.dirname(native),{recursive:true});await fs.writeFile(native,'synthetic native executable fixture');await fs.mkdir(path.join(pkg,'bin'),{recursive:true});await fs.writeFile(path.join(pkg,'package.json'),JSON.stringify({bin:{claude:'bin/claude.js'}}));await fs.writeFile(path.join(pkg,'bin/claude.js'),'synthetic npm entry fixture');
+ process.env.USERPROFILE=home;process.env.PATH=npm;process.env.APPDATA=home;assert.equal(findTool('claude'),native);
+ }finally{for(const [key,value]of Object.entries(saved)){if(value===undefined)delete process.env[key];else process.env[key]=value;}await fs.rm(home,{recursive:true,force:true});}
+});
 test('Real image compression replaces sips, retains original, preserves GIF',async()=>{
  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'clawbot-image-'));let output;
  try{const file=path.join(dir,'large image.png');await sharp({create:{width:2400,height:1600,channels:3,background:'#2070aa'}}).png().toFile(file);

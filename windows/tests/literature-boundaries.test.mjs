@@ -59,12 +59,12 @@ test('settings grouping preserves each original field exactly once and switches 
   const source=await fs.readFile(new URL('../.build/work/lib/client.js',import.meta.url),'utf8');let plugin,states=[],cursor=0;
   const react={createElement:(type,props,...children)=>({type,props:props||{},children}),useState:v=>{const index=cursor++;if(!(index in states))states[index]=v;return [states[index],x=>states[index]=x];},useEffect(){}};
   vm.runInNewContext(source.replace('    exports.apply = apply;','    exports.__groups=SettingsGroups; exports.apply=apply;'),{window:{__ModuleLoader__:{load:({factory})=>{plugin=factory(id=>id==='react'?react:{createSnapshotStore:()=>({set(){}})});}}}});
-  const fields=Array.from({length:21},(_,i)=>({type:'fixture',props:{index:i},children:[]}));
+  const fields=Array.from({length:28},(_,i)=>({type:'fixture',props:{index:i},children:[]}));
   const render=()=>{cursor=0;return plugin.__groups({fields});};const walk=(n,out=[])=>{if(Array.isArray(n))n.forEach(c=>walk(c,out));else if(n&&typeof n==='object'&&!n.props?.hidden){out.push(n);walk(n.children,out);}return out;};
   let tree=render();const tabs=walk(tree).filter(n=>n.props.role==='tab');assert.equal(tabs.length,5);const seen=[];
-  const all=(n,out=[])=>{if(Array.isArray(n))n.forEach(c=>all(c,out));else if(n&&typeof n==='object'){out.push(n);all(n.children,out);}return out;};assert.equal(all(tree).filter(n=>n.type==='fixture').length,21);assert.equal(all(tree).filter(n=>n.props.role==='tabpanel'&&n.props.hidden).length,4);
+  const all=(n,out=[])=>{if(Array.isArray(n))n.forEach(c=>all(c,out));else if(n&&typeof n==='object'){out.push(n);all(n.children,out);}return out;};assert.equal(all(tree).filter(n=>n.type==='fixture').length,28);assert.equal(all(tree).filter(n=>n.props.role==='tabpanel'&&n.props.hidden).length,4);
   for(const tab of tabs){tab.props.onClick();tree=render();seen.push(...walk(tree).filter(n=>n.type==='fixture').map(n=>n.props.index));}
-  assert.deepEqual(seen.sort((a,b)=>a-b),Array.from({length:21},(_,i)=>i));
+  assert.deepEqual(seen.sort((a,b)=>a-b),Array.from({length:28},(_,i)=>i));
   walk(tree).find(n=>n.type==='input').props.onInput({target:{value:'emoji'}});tree=render();assert.ok(walk(tree).some(n=>n.type==='fixture'&&n.props.index===10));
   assert.match(source,/h\(SettingsGroups,\{fields\}\)/);
 });

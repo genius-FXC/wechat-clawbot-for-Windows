@@ -1,6 +1,6 @@
 {
   "name": "wechat-clawbot-windows-adapter",
-  "version": "0.9.8-windows.21",
+  "version": "1.3.0-windows.1",
   "private": true,
   "type": "module",
   "description": "Windows adaptation layer; upstream source remains unchanged",
@@ -11,6 +11,7 @@
     "build": "node scripts/build.mjs",
     "test": "npm run build && node --test tests/*.test.mjs && node scripts/test-upstream.mjs",
     "doctor": "node scripts/doctor.mjs",
+    "test:upstream": "node scripts/test-upstream-regression.mjs",
     "pack": "npm run build && node scripts/pack.mjs"
   },
   "dependencies": {
@@ -47,6 +48,6 @@
     "uuid": "14.0.2",
     "ws": "^8.22.0",
     "yaml": "2.8.3",
-    "zod": "^3.25.76"
+    "zod": "^4.4.3"
   }
 }
