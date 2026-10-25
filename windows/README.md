@@ -58,6 +58,18 @@ npm run pack
 
 行业资讯与吃喝信息先联网核对，再用第一人称短评分享；可配经模型查看的原文图片，来源保存在记录中，不强塞链接。普通回复、既有性格和 MemOS 设置继续使用。仅接入绑定微信主会话，普通 DSH 会话不受影响。规则预览不发送消息。详见 [主动互动扩展说明](../extensions/proactive/README.md)。
 
+## Zotero 论文工作台与独立推荐
+
+Windows 版增加只读 Zotero 分类、分页检索、正文与补充材料研读，以及微信收到或引用 PDF 后的自动登记。没有父级记录的独立 PDF 也可检索。同名收件用唯一文件保存，不覆盖前一份附件。
+
+在「微信 Bot → 论文研读」打开工作台，填写已有论文规则 Markdown 路径，配置 Python（pdfplumber、reportlab、pypdf）、Poppler 和独立输出目录。每个任务读取当前规则并记录哈希，不修改该规则或 Zotero 原件。若使用本机 Codex 的附带依赖，可在 `windows/` 运行 `node scripts/paper-configure.mjs 'C:/path/to/reading-rules.md'`；此助手脚本连接当前电脑已启动的 DSH web profile，规则路径必须由使用者提供。
+
+微信可说“列出 Zotero 分类”“查 FeSe 的 PDW 论文”“按我的规则读这篇，正文与补充材料一起，结果发文件”“继续”。默认按原文分 2–5 个连续部分，每次一部分；普通问题仍可只回答所问。生成中文 PDF 和保留 LaTeX 的 Markdown，较大报告按页分卷。导出失败保留草稿，能在重载后重试而不再次调用模型。网页可检索、生成、继续、取消和下载，网页调试不会自动发微信。详见 [论文工作台说明](../extensions/literature/README.md)。
+
+推荐是另一个包 `dsh-paper-recommender`，在 `extensions/recommender/` 单独执行 `npm run pack`，安装生成的 tgz 并启用 bundle；要求 Node 22.19+。依据本地标题、摘要、标签或明确要求检索真实 arXiv，排除已收藏、已读和不感兴趣的条目，保存明确兴趣。全文和私人笔记不上传给 arXiv，推荐并不代表全文已读。微信工具限定绑定本人主会话，未全局挂到 DSH，网页在独立卡片管理。详见 [推荐说明](../extensions/recommender/README.md)。
+
+原有设置分成论文研读、性格与记忆、主动互动、模型与连接、文件与高级五组，支持关键词筛选。外出使用时电脑、DSH、Zotero 和微信桥需保持运行；扫描 PDF 的文字不足会标记，当前未加入自动 OCR。
+
 ## 平台差异
 
 - Codex/Claude：查找 `.exe`、官方 npm JS 入口和 Codex Windows 安装目录；保留空格路径，禁止用拼接 shell 命令执行输入。
@@ -70,6 +82,6 @@ npm run pack
 
 ## 验证边界与来源
 
-自动化验证不发送真实微信消息、不调用付费模型。微信扫码、真实微信收发、Claude 真实会话和桌面端共享服务需要各自在已授权环境中验收。
+单元与边界测试使用模拟微信网络，不发送真实消息或调用账户模型。另有明确的本机研读测试脚本 `paper-live-read.mjs`，会使用当前 DSH 模型及已有登录，消耗相应额度；报告放在隔离的 `self-tests` 目录，不自动发微信。微信扫码、真实微信收发、Claude 真实会话和桌面端共享服务的验收应与模拟测试区分。
 
 原项目：[Orbit-Labs-AI/wechat-clawbot](https://github.com/Orbit-Labs-AI/wechat-clawbot/tree/feat/codex-wechat-bridge)。原 MIT 许可和 NOTICE 保留在生成包中。上游更新后需审查兼容锚点、更新哈希清单并重新运行测试。

@@ -1,0 +1,49 @@
+{
+  "name": "dsh-paper-recommender",
+  "version": "0.1.0-local.6",
+  "description": "Zotero-informed arXiv recommendations scoped to a WeChat agent",
+  "license": "MIT",
+  "type": "module",
+  "main": "lib/index.mjs",
+  "exports": {
+    ".": "./lib/index.mjs",
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "npm run build && node --test tests/*.test.mjs",
+    "pack": "npm run build && npm pack --pack-destination ../../windows/dist"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.4",
+    "@deepseek-ai/dsh-agent": "^0.2.0-rc.2",
+    "@deepseek-ai/dsh-system-prompt": "^0.2.0-rc.2",
+    "@deepseek-ai/dsh-tools": "^0.2.0-rc.2",
+    "@deepseek-ai/schemastery": "^3.18.4"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "slots",
+        "configForms"
+      ]
+    }
+  },
+  "dependencies": {
+    "undici": "8.11.2"
+  }
+}

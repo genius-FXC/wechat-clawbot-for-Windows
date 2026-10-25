@@ -1,0 +1,7 @@
+- insert:
+    - id: paper-recommender
+      name: 'dsh-paper-recommender'
+      config:
+        enabled: true
+        sessionId: 'wechat-main'
+        zoteroUrl: 'http://127.0.0.1:23119'

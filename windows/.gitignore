@@ -2,3 +2,26 @@ node_modules/
 .build/
 dist/
 *.tgz
+
+# Local integration evidence can contain paper metadata and account state.
+PAPER-WORKBENCH-PLAN.md
+PAPER-WORKBENCH-VALIDATION.md
+PROACTIVE-VALIDATION.md
+*.log
+*.jsonl
+*.jsonl.*
+*.pdf
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.db
+*.db-*
+*.pem
+*.key
+.env
+.env.*
+__pycache__/
+reports/
+logs/
+sessions/
+accounts/
