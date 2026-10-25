@@ -7,6 +7,18 @@ function SettingsGroups({fields}) {
     {id:'model',title:'模型与连接',hint:'provider、模型、思考等级、看图、白名单、MCP、Codex、Claude',indices:[4,5,6,7,17,18,19,20]},
     {id:'advanced',title:'文件与高级',hint:'图片压缩、JPEG、文件预告、审批、日志、工作目录',indices:[9,11,12,13,14,15,16]},
   ];
+  // Prefer stable field labels; retain the original index mapping for older
+  // snapshots and send unknown/new controls to Advanced rather than hiding them.
+  const legacy=new Map(groups.flatMap(g=>g.indices.map(i=>[i,g.id])));
+  for(const g of groups)g.indices=[];
+  fields.forEach((field,i)=>{
+    const key=String(field?.key??field?.props?.key??'');let id;
+    if(i<4)id=['companion','companion','proactive','papers'][i];
+    else if(/模型|思考|白名单|允许给 bot|MCP|Codex|Claude|DSH 会话/.test(key))id='model';
+    else if(/emoji|空闲.*整理/.test(key))id='companion';
+    else id=key?'advanced':legacy.get(i)||'advanced';
+    groups.find(g=>g.id===id).indices.push(i);
+  });
   const q=query.trim().toLowerCase(),matches=groups.filter(g=>(g.title+g.hint).toLowerCase().includes(q));
   return h('div',null,
     h('input',{type:'search','aria-label':'查找设置分组',value:query,placeholder:'查找设置：论文、记忆、模型…',className:S.input,style:{width:'100%',boxSizing:'border-box',marginBottom:12},onInput:e=>setQuery(e.target.value)}),

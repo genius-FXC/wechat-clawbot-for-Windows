@@ -1,4 +1,16 @@
-# Windows companion update: windows.7 → windows.21
+# Windows companion update: 1.3.0-windows.1
+
+## Upstream 1.3.0 integration
+
+The fork merges upstream `main` at `a7bc922f6eaa7d5a8c6d4e468f725631d0bbbfc7`. All 80 pinned upstream files match that revision; modifications are confined to the generated build, adapter, and extension layers. The author repository is not modified.
+
+New upstream behavior includes message coalescing, durable deferred delivery, DSH session tools and notifications, singleton takeover, and time-context corrections. The Windows layer preserves stdio/named-pipe handling, image processing, personality, owner-scoped memory, proactive sharing, literature reading, and the independent recommender. Native macOS calendar/alarms/secretary support remains off and unavailable on Windows.
+
+Integration guards keep a proactive producer separate from human message batches, cancel background sharing on incoming human text, and exclude it from automatic user-memory capture. Settings grouping uses labels and retains unknown fields under Advanced so additions from upstream cannot silently disappear.
+
+The combined build has its own Windows tests. `npm run test:upstream` runs the upstream static/integration suite on a separate pristine pinned copy because those checks intentionally do not recognize third-party extension source shapes. It uses synthetic state and file-URL handling on Windows; the POSIX Claude-discovery fixture and three POSIX mode-bit assertions are explicitly skipped there, not counted as passes. Windows discovery, recipient persistence, route authentication, and unsupported-native-operation guards have separate combined-build coverage. These checks do not claim native macOS or phone-delivery acceptance.
+
+## Earlier companion update: windows.7 → windows.21
 
 This update keeps all 68 pinned upstream files unchanged. New behavior is implemented in `extensions/` and assembled by the Windows build layer.
 

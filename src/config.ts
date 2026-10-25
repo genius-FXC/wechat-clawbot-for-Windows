@@ -92,7 +92,7 @@ export interface ClawbotConfig {
    * Whether the auto-memory classifier may run.
    *
    * **On by default (since 0.9.4).** A message that looks like a durable
-   * personal fact ("我住在…", "我不能喝咖啡") is sent VERBATIM to a model to be
+   * personal fact ("我住在…", "我不吃香菜") is sent VERBATIM to a model to be
    * judged worth remembering.
    *
    * Since 0.9.3 that model is **the one this session already routes to**: the
@@ -131,6 +131,15 @@ export interface ClawbotConfig {
   idleCompaction: boolean;
 
   /**
+   * The size (tokens of the last request) at which the quiet-time compaction
+   * runs, instead of 85% of the host's threshold. The host's threshold comes
+   * from the model's window, and that window is shared with the web UI:
+   * shrinking it to keep the bot lean would make every web session on the same
+   * model compact early too. Unset = 85% of the host's threshold.
+   */
+  idleCompactionTokens?: number;
+
+  /**
    * Whether DSH may splice workspace instruction files (AGENTS.md / CLAUDE.md)
    * into the WeChat session (see `src/workspace-instructions.ts`). On by
    * default — the host's own behaviour, and for some owners an AGENTS.md in
@@ -143,15 +152,56 @@ export interface ClawbotConfig {
 
   /**
    * Whether the `/plugins/clawbot/mcp/*` bridge answers requests — the surface
-   * dsh-mcp-bridge (and therefore Claude Code) calls. Off makes every route
+   * an MCP client (the bundled clawbot-mcp, or a Claude Code MCP server) calls. Off makes every route
    * return 403 while leaving them registered, so this is a live kill switch
    * rather than something needing a restart.
    */
   mcpBridge: boolean;
 
-  /** Lazy Codex peer connection. Socket shares a running server; stdio is opt-in. */
+  /**
+   * Codex peer tools for the WeChat bot (list/read/relay/progress). Off by
+   * default: while off, neither the five tools nor any Codex guidance reaches
+   * the model, so the feature costs nothing per request. Cold on purpose —
+   * flipping it restarts the WeChat listener, which rebuilds the tool list,
+   * so the tools and prompt stay byte-stable between flips (prompt cache).
+   * The connection itself is lazy: socket shares a running App Server, stdio
+   * (opt-in) starts a private one.
+   */
   codexPeer: boolean;
   codexTransport: "socket" | "stdio";
+
+  /**
+   * 全天候秘书, the all-day secretary: the macOS Calendar (mac-calendar.ts: read
+   * every calendar, plan in one dedicated calendar) and alarms (mac-alarms.ts:
+   * urgent reminders that ring like an alarm). Off by default; while off the
+   * tools are not registered, so it costs nothing. The settings card's one
+   * switch sets this and `secretary` together.
+   */
+  macCalendar: boolean;
+  /**
+   * The dedicated calendar's name, chosen by the owner (created on first use). Hot.
+   * The alarm list takes it the first time and is then kept by id through renames.
+   */
+  macCalendarName: string;
+  /**
+   * Whether events the bot adds get a calendar alert by default, and how many
+   * minutes before. Hot. Calendar alerts ring on the phone through iCloud; they
+   * do not replace the bot's WeChat reminders (duplicates are fine).
+   */
+  macCalendarAlert: boolean;
+  macCalendarAlertMinutes: number;
+  /**
+   * Ask the owner on WeChat before adding to, changing or deleting from any
+   * calendar but the dedicated one. Hot. Off: the owner's writable calendars
+   * are changed directly; a change other attendees would be told about still asks.
+   */
+  macCalendarAsk: boolean;
+  /**
+   * The rules of 全天候秘书 (secretary.ts): planning rules written into
+   * memory.md while this and macCalendar are both on, moved out (and kept)
+   * when either goes off. Hot; index.ts edits the memory file on the flip.
+   */
+  secretary: boolean;
   codexBinary?: string;
   codexSocket?: string;
 
@@ -222,8 +272,14 @@ export const DEFAULT_CONFIG: ClawbotConfig = {
   idleCompaction: true,
   workspaceInstructions: true,
   mcpBridge: true,
-  codexPeer: true,
+  codexPeer: false,
   codexTransport: "socket",
+  macCalendar: false,
+  macCalendarName: "",
+  macCalendarAlert: true,
+  macCalendarAlertMinutes: 10,
+  macCalendarAsk: true,
+  secretary: false,
   imageQuality: 80,
   compressThresholdBytes: 1024 * 1024,
   noticeMinBytes: 2 * 1024 * 1024,
@@ -290,6 +346,10 @@ export function normalizeConfig(raw?: Partial<ClawbotConfig> | Record<string, un
       typeof r.autoMemory === "boolean" ? r.autoMemory : DEFAULT_CONFIG.autoMemory,
     idleCompaction:
       typeof r.idleCompaction === "boolean" ? r.idleCompaction : DEFAULT_CONFIG.idleCompaction,
+    idleCompactionTokens:
+      typeof r.idleCompactionTokens === "number" && Number.isFinite(r.idleCompactionTokens) && r.idleCompactionTokens > 0
+        ? Math.round(r.idleCompactionTokens)
+        : undefined,
     workspaceInstructions:
       typeof r.workspaceInstructions === "boolean" ? r.workspaceInstructions : DEFAULT_CONFIG.workspaceInstructions,
     mcpBridge:
@@ -297,6 +357,19 @@ export function normalizeConfig(raw?: Partial<ClawbotConfig> | Record<string, un
     codexPeer:
       typeof r.codexPeer === "boolean" ? r.codexPeer : DEFAULT_CONFIG.codexPeer,
     codexTransport: r.codexTransport === "stdio" ? "stdio" : "socket",
+    macCalendar:
+      typeof r.macCalendar === "boolean" ? r.macCalendar : DEFAULT_CONFIG.macCalendar,
+    macCalendarName: typeof r.macCalendarName === "string" ? r.macCalendarName.trim().slice(0, 60) : DEFAULT_CONFIG.macCalendarName,
+    macCalendarAlert:
+      typeof r.macCalendarAlert === "boolean" ? r.macCalendarAlert : DEFAULT_CONFIG.macCalendarAlert,
+    macCalendarAlertMinutes:
+      typeof r.macCalendarAlertMinutes === "number" && Number.isFinite(r.macCalendarAlertMinutes)
+        ? Math.min(10_080, Math.max(0, Math.round(r.macCalendarAlertMinutes)))
+        : DEFAULT_CONFIG.macCalendarAlertMinutes,
+    macCalendarAsk:
+      typeof r.macCalendarAsk === "boolean" ? r.macCalendarAsk : DEFAULT_CONFIG.macCalendarAsk,
+    secretary:
+      typeof r.secretary === "boolean" ? r.secretary : DEFAULT_CONFIG.secretary,
     codexBinary: typeof r.codexBinary === "string" && r.codexBinary.trim() ? r.codexBinary.trim() : undefined,
     codexSocket: typeof r.codexSocket === "string" && r.codexSocket.trim() ? r.codexSocket.trim() : undefined,
     noticeMinBytes:
@@ -362,6 +435,12 @@ export const BaseConfig = Schema.object({
       "空闲时整理对话(默认开):回复结束、安静 10 分钟后,如果上一次请求已接近宿主的压缩阈值,"
       + "就趁空闲把旧对话整理成摘要。下一条消息来时不用再等压缩。关掉则只剩宿主在回复前压缩。",
     ),
+  idleCompactionTokens: Schema.number()
+    .min(0)
+    .description(
+      "空闲整理阈值(token):上一次请求超过这个数,空闲时就整理。留空 = 宿主压缩阈值的 85%。"
+      + "只管 bot:宿主阈值跟着模型窗口走、网页会话也用同一个窗口,改窗口会让网页一起提前压缩,改这里不会。",
+    ),
   workspaceInstructions: Schema.boolean()
     .default(true)
     .description(
@@ -373,13 +452,33 @@ export const BaseConfig = Schema.object({
     .default(true)
     .description("开放 MCP 桥(/plugins/clawbot/mcp/*):让 Claude Code / Codex 列出/读取/驱动 DSH 会话,并通过 bot 给你发微信。只监听本机,而且每个请求都要 token"),
   codexPeer: Schema.boolean()
-    .default(true)
-    .description("让微信 bot 查看 Codex 项目/会话、转发消息和查询进度。按需连接,关闭后立刻停止接受新的会话操作"),
+    .default(false)
+    .description("【改动会重启微信监听】让微信 bot 查看 Codex 项目/会话、转发消息和查询进度(默认关)。关着时这几个工具不发给模型,不占 token"),
   codexTransport: Schema.union(["socket", "stdio"] as const)
     .default("socket")
     .description("【改动会重启微信监听】socket 通过 WebSocket 连接共享 Codex App Server;stdio 启动独立后台服务,只能在明确允许续聊后执行历史任务"),
   codexBinary: Schema.string()
     .description("【改动会重启微信监听】Codex CLI 路径,留空自动查找"),
+  macCalendar: Schema.boolean()
+    .default(false)
+    .description("【全天候秘书】【改动会重启微信监听】让 bot 读取 Mac「日历」里所有账户的日程(含备注)、在专用日历里自主安排,并能设闹钟(紧急提醒:到点像闹钟一样响,响在「查找」里作为“我的位置”的设备上,一般是 iPhone)。仅 macOS,默认关;关着时不占 token。打开后在 Mac 前点设置卡片上的「一键授权」。设置卡片上的开关会连同 secretary 一起拨"),
+  macCalendarName: Schema.string()
+    .default("")
+    .description("bot 专用日历的名字(例如「规划」)。bot 在这个日历里自主加、改、删;动别的日历前问不问你,看「改别的日历前先问我」。第一次用到时自动创建。闹钟清单第一次设闹钟时按它起名(「规划 闹钟」),之后改名字也继续用那个清单(已经设的闹钟不会丢)"),
+  macCalendarAlert: Schema.boolean()
+    .default(true)
+    .description("bot 往日历里加日程时,默认带一个日历提醒(会在手机上响)。和 bot 的微信提醒重复没关系;全天日程不加"),
+  macCalendarAlertMinutes: Schema.number()
+    .default(10)
+    .min(0)
+    .max(10080)
+    .description("日历提醒提前几分钟(0 = 开始时)"),
+  macCalendarAsk: Schema.boolean()
+    .default(true)
+    .description("bot 往专用日历以外的日历里加、改、删日程前,先在微信里问你,回「好」才动(默认开)。关掉就直接改;只读和订阅的日历本来就改不了,会通知其他参与者的改动仍会先问"),
+  secretary: Schema.boolean()
+    .default(false)
+    .description("全天候秘书的规则(要 macCalendar 也开着):打开时把一套排日程、定闹钟的规则写进长期记忆 memory.md 的「## 全天候秘书」一节,可以自己改;关掉时移出记忆并留一份副本,再打开原样放回。设置卡片上和 macCalendar 是同一个开关"),
   codexSocket: Schema.string()
     .description("【改动会重启微信监听】共享 App Server 的 socket 路径,留空使用 Codex 默认路径"),
   maxImageEdge: Schema.number()
@@ -471,10 +570,10 @@ export const HOT_FIELDS = new Set<keyof ClawbotConfig>([
   // 纯读取的开关,下一条消息生效即可,不需要重启。
   "autoMemory",
   "idleCompaction",
+  "idleCompactionTokens",
   "workspaceInstructions",
   "stripEmoji",
   "mcpBridge",
-  "codexPeer",
   "maxImageEdge",
   "imageQuality",
   "compressThresholdBytes",
@@ -483,6 +582,19 @@ export const HOT_FIELDS = new Set<keyof ClawbotConfig>([
   "logLevel",
   // Read fresh on each send, so changing it takes effect on the next message.
   "claudeResumePermissionMode",
+  // Switches that change which tools the bot has. Hot so the settings card can
+  // write them at all (the host's form edits volatile fields only; as cold
+  // fields both switches silently did nothing), and index.ts restarts the
+  // WeChat listener when one flips, so the tool list is rebuilt.
+  "macCalendar",
+  "codexPeer",
+  // Read on each calendar call.
+  "macCalendarName",
+  "macCalendarAlert",
+  "macCalendarAlertMinutes",
+  "macCalendarAsk",
+  // index.ts adds or removes the rules in memory.md when it flips.
+  "secretary",
 ]);
 
 /**

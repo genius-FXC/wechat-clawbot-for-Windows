@@ -3,9 +3,13 @@
 English | [中文](README.zh.md)
 
 Chat with the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH) agent on your computer from WeChat.
+Clawbot is a DSH plugin and fully open source. It replies with the AI you use in DSH and does not upload your information.
 Away from your desk, you can still ask it to look through files, edit documents or run commands, and the results come back to the WeChat chat.
+It can also plan your days from the system calendar and create events for you (macOS only).
 
-It uses WeChat's official **微信ClawBot** channel (Tencent iLink): no second account and no web-login tricks.
+It uses WeChat's official **微信ClawBot** channel: just scan a QR code to log in.
+
+After nearly two months of development and real-world use, `wechat-clawbot` has become steadily more stable and economical, and the stable release **v1.0.0** came out on 10 October 2026.
 
 ## What it does
 
@@ -18,14 +22,35 @@ It uses WeChat's official **微信ClawBot** channel (Tencent iLink): no second a
 - **Asks before it acts**: anything that needs your approval (e.g. touching files outside its working directory) is asked in WeChat; reply `同意` / `拒绝` (or `yes` / `no`)
 - **Understands quotes**: reply to an older message with WeChat's quote feature and it knows which one you mean
 - **Long chats stay quick**: when the conversation gets long, it tidies older messages into a summary during a quiet spell after a reply, so your next message never waits for it
+- **Schedule secretary (macOS only, off until you turn it on)**: plans your days and creates events from the Mac's calendar, with the default rules or your own.
+
+## Schedule secretary: plan your days from WeChat (new; macOS only, off until you turn it on)
+
+- **Sees your whole schedule**: reads every account in the Mac Calendar app (iCloud, Google, Exchange, subscribed calendars), notes included. Ask "am I free tomorrow afternoon?" and it checks the calendar before answering.
+- **Plans straight into your calendar**: tell it "the report is due Thursday and I still have two papers to read". It finds free time, puts the work into **a dedicated calendar you name yourself**, and replies in a few lines: what happens when, what got moved, where things clash. The calendar is created in iCloud when you have it, so the events show up on your phone too, and it still reminds you on WeChat when it's time.
+- **Acts on its own calendar only**: it adds, changes and deletes events in the dedicated calendar by itself. Anything in your other calendars, it asks you on WeChat first and waits for a yes.
+- **Reminders stay reminders**: a plain "remind me to…" becomes a WeChat reminder and stays out of the calendar. Only things that take up time go into the calendar.
+- **Your rules**: how it plans is written in the `## 日程秘书` section of your long-term memory file, `memory.md`. Edit it however you like: the **打开 memory.md** button in the settings opens it.
+
+This feature is **macOS only** and **off by default**. To turn it on: in the DSH web UI, open Plugins → wechat-clawbot → 微信 Bot. Under **Mac 日历**, type a name for the dedicated calendar, switch it on, and click "Allow" once on the Mac when it asks for calendar access. Then switch on **日程秘书**.
+The first time, the plugin compiles a small background app, `Clawbot-Calendar`, on your Mac. This needs the Xcode command line tools (`xcode-select --install` if you don't have them).
+
+## Cost
+
+- When the author uses gpt-6-luna, one WeChat message costs about $0.005–0.007 on average; at around 7 messages a day that is about $1.4 a month (under ¥10).
 
 ## Requirements
 
-- DSH **0.1.7 – 0.2.x** (tested on 0.1.7-rc.2 and 0.2.0-rc.2), Node.js 22+ and pnpm
+- DSH **0.1.7 – 0.2.0** (tested on 0.1.7-rc.2 and 0.2.0-rc.2), Node.js 22+ and pnpm
 - The official **微信ClawBot** plugin in the WeChat mobile app (WeChat → Settings → Plugins; the first scan may ask you to update WeChat)
 - A computer that stays on: the bot is online while DSH is running
+- For the Mac calendar and the schedule secretary: macOS and the Xcode command line tools (`xcode-select --install` if you don't have them)
 
 ## Set up in three steps
+
+**0. Got an agent?**
+
+Copy the link to this page, or tell any agent `wechat-clawbot`, and ask it to install it into DSH. Or:
 
 **1. Install the plugin**
 
@@ -45,7 +70,7 @@ A QR code appears in the terminal. Scan it with WeChat's "Scan" and confirm.
 
 **3. Start chatting**
 
-A new contact, **微信ClawBot**, shows up in WeChat. Message it. The running DSH picks up the new link within a few seconds, so no restart is needed.
+A new contact, **微信ClawBot**, shows up in WeChat. Message it. The running DSH picks up the new link automatically and starts a conversation.
 
 Other commands: `clawbot status` shows who is linked, `clawbot logout` unlinks (use the same `npx -y -p wechat-clawbot` prefix).
 
@@ -59,7 +84,10 @@ Open **Plugins → wechat-clawbot → 微信 Bot** in the DSH web sidebar. Chang
 - **空闲时整理对话** (tidy up while idle): on by default. Off leaves only DSH's own compaction, which runs right before a reply and makes that reply wait.
 - **把工作目录的说明文件交给 bot** (workspace instruction files): on by default (DSH's own behaviour: once the bot works in a project, its AGENTS.md / CLAUDE.md is put into the chat, and the whole file again after every edit). Off keeps them out of the WeChat session, which helps when those files are long and change often; the bot can still read them when it needs to.
 - **开放 MCP 桥（Claude / Codex）** (MCP bridge): see the integrations below.
-- **Codex 会话联动**: select a Codex project and conversation, relay a message, or query progress.
+- **Codex 会话联动**: select a Codex project and conversation, relay a message, or query progress. Off by default; when on, every request carries 5 more tools (about 1k tokens). Changing it restarts the WeChat listener.
+- **Mac 日历** (Mac calendar; macOS only, off by default): type the dedicated calendar's name first, then switch it on. Changing it restarts the WeChat listener.
+- **日历提醒** (calendar alerts): events the bot adds get an alert 10 minutes before by default. Switch it off or change the minutes.
+- **日程秘书** (schedule secretary): needs the Mac calendar on. Switching it on writes the planning rules into `memory.md`; switching it off moves them out and keeps a copy, which comes back unchanged next time. The **打开 memory.md** button next to it opens the file on the Mac.
 
 A few options (the session id, the working directory, whether to start with DSH) live in the `- id: clawbot` entry of
 `~/.dsh/profiles/web/cordis.patch.yml`. Changing them restarts the WeChat listener automatically.
@@ -72,6 +100,7 @@ A few options (the session id, the working directory, whether to start with DSH)
 - **Auto-memory** (on by default): short messages that look like lasting facts ("I don't drink coffee") get a second
   question to **the same model**: should this be remembered? To turn it off, add `autoMemory: false` to the `clawbot`
   entry in `cordis.patch.yml`. It takes effect on the next message.
+- **Mac calendar** (off by default): when the bot looks at your calendar, the events it reads (notes included) go to the model. Only you can use the calendar; while anyone else is on the allow list, the calendar tools are not offered at all.
 - The WeChat link and the long-term memory are stored on your computer, under `~/.dsh/clawbot/`.
 
 ## FAQ
@@ -91,6 +120,7 @@ It is written for an AI agent installing the plugin for you, and it works just a
 - No group chats and no voice messages.
 - One WeChat account per DSH installation.
 - The bot is offline while the computer is off or DSH is not running.
+- The Mac calendar and the schedule secretary work on macOS only.
 
 ## Working with Claude Code (optional)
 
@@ -135,6 +165,7 @@ Codex can read `clawbot://wechat-session` or call `dsh_get_wechat_session` to se
 `dsh_notify_wechat({text: "…"})` sends only to the QR-linked owner and records a `[Codex 发给用户的]` copy in DSH history;
 it does not start another bot turn. `dsh_send_to_session` drives a selected DSH conversation without automatically
 forwarding its replies to WeChat. Use the notification tool when you want a phone update.
+Both tools are marked as having outside effects, so with Codex's default approval settings it asks you before each call.
 
 ### Choose the Codex project and conversation from WeChat
 
@@ -142,7 +173,8 @@ The default `codexTransport: socket` connects to an existing shared App Server u
 The default socket is `$CODEX_HOME/app-server-control/app-server-control.sock` (`CODEX_HOME` defaults to `~/.codex`).
 Set `codexSocket` to use a specific shared server's socket. Set `codexBinary` to select the CLI for standalone mode.
 These fields belong in the `clawbot` row of
-your local DSH `cordis.patch.yml`; changing them restarts the plugin. `codexPeer` is a live switch in the settings card.
+your local DSH `cordis.patch.yml`; changing them restarts the plugin. `codexPeer` is the switch in the settings card. It is off by default,
+and while it is off none of these tools is sent to the model; changing it also restarts the WeChat listener.
 
 The server must be the one executing the selected conversations and support the documented Unix socket WebSocket transport.
 You can start a local shared service with `codex app-server --listen unix://` or `--listen unix:///path/to/rpc.sock`.
@@ -175,6 +207,9 @@ close its original client and explicitly permit background continuation (`allowR
 No model, sandbox, or approval policy is overridden. Command/file approval requests and user questions from
 this independent runner go to WeChat; unsupported permission grants are declined. Shared-server approvals remain
 with the existing Codex client.
+**stdio mode is experimental**: the approval prompts it forwards to WeChat do not yet show full details (exact
+changes, extra permissions), and they go to whoever is chatting with the bot at the time. Use it only when you are the
+bot's only allowed sender. The default socket mode is not affected.
 
 ### Let clawbot report progress
 
@@ -196,6 +231,10 @@ The progress HTTP routes are `POST /plugins/clawbot/mcp/codex/report` and
 the existing session/notification routes. The MCP client accepts loopback origins only and refuses redirects.
 No login data, conversation snapshots, preferences, project inventories, or local workspace indexes are bundled in the package.
 Protocol reference: [Codex App Server](https://learn.chatgpt.com/docs/app-server).
+
+## Contributors
+
+- [@MistyHuang03](https://github.com/MistyHuang03): Codex integration ([#1](https://github.com/Alphainfix/wechat-clawbot/pull/1))
 
 ## Development
 

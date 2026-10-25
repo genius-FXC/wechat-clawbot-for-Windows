@@ -22,7 +22,7 @@ export async function integratePersonality(work, patch) {
   await patch('src/prompt.ts','  config: { stripEmoji: boolean },','  config: { stripEmoji: boolean } & Partial<PersonalityConfig>,');
   await patch('src/prompt.ts','    name: "wechat-memory",','    name: "wechat-personality",\n    order: 81,\n    text: (context) => {\n      const agent = (context as { agent?: { session?: { id?: unknown } } }).agent;\n      return String(agent?.session?.id) === String(sessionId) ? buildPersonalityPrompt(config) : "";\n    },\n  });\n  ctx.systemPrompt.section({\n    name: "wechat-memory",');
   await patch('src/client.js','      const fields = [','      const fields = [\n        h(PersonalityFields, { key: "personality", value: v, user, disabled, set, clear }),');
-  await patch('src/client.js','"模型、图片、发送与白名单。改完立刻生效，微信连接不中断"','"性格、模型、图片与发送设置。改完下次回复生效"');
+  await patch('src/client.js','"模型、图片、白名单、全天候秘书（日历和闹钟）。大多改完立刻生效，微信连接不中断"','"性格、模型、图片与发送设置。改完下次回复生效"');
   await patch('src/tool.ts','"Send ONE message per call; keep each message as short as possible. "','"Send ONE message per call; keep it concise while respecting the configured conversation style and the user\'s requested detail. "');
   await patch('src/tool.ts','"The exact text to send to WeChat (plain text, no emojis; may use WeChat native emoji codes like [捂脸])."','"The exact text to send to WeChat. Follow the configured emoji policy; do not use bracketed WeChat emoji codes."');
 }

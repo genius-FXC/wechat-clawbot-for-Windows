@@ -28,6 +28,7 @@ export function findTool(tool:'codex'|'claude',override?:string):string {
   const folders=(process.env.PATH??'').split(path.delimiter).map(s=>s.trim().replace(/^"|"$/g,''));
   folders.push(path.join(os.homedir(),'.local','bin'),path.join(process.env.APPDATA??os.homedir(),'npm'));
   const candidates:string[]=[];
+  if(process.platform==='win32'&&tool==='claude')candidates.push(path.join(os.homedir(),'.local','bin','claude.exe'));
   if(process.platform==='win32'&&tool==='codex') {
     const root=path.join(process.env.LOCALAPPDATA??'','OpenAI','Codex','bin');
     try {for(const version of fs.readdirSync(root).sort((a,b)=>fs.statSync(path.join(root,b)).mtimeMs-fs.statSync(path.join(root,a)).mtimeMs))candidates.push(path.join(root,version,'codex.exe'));}catch{}

@@ -17,11 +17,11 @@ export async function verify(){for(const [file,hash] of Object.entries(manifest.
 await verify();
 if(path.dirname(work)!==path.join(windows,'.build')||path.basename(work)!=='work')throw Error('Unsafe build path');
 await fs.rm(work,{recursive:true,force:true});await fs.mkdir(work,{recursive:true});
-for(const file of ['src','test','package.json','tsconfig.json','cordis.patch.yml','README.md','README.zh.md','wechat-clawbot-INSTALL.md','LICENSE','NOTICE'])await fs.cp(path.join(root,file),path.join(work,file),{recursive:true});
+for(const file of ['src','test','scripts','assets','native','package.json','tsconfig.json','cordis.patch.yml','README.md','README.zh.md','wechat-clawbot-INSTALL.md','LICENSE','NOTICE'])await fs.cp(path.join(root,file),path.join(work,file),{recursive:true});
 async function patch(file,from,to){const p=path.join(work,file);const content=(await fs.readFile(p,'utf8')).replaceAll('\r\n','\n');if(content.split(from).length!==2)throw Error('Patch anchor drift: '+file+' / '+from.slice(0,60));await fs.writeFile(p,content.replace(from,to));}
 // Only the generated copy is changed; each anchor must match exactly once.
 await patch('src/codex-rpc.ts','import { spawn, type ChildProcessWithoutNullStreams }','import { type ChildProcessWithoutNullStreams }');
-await patch('src/codex-rpc.ts','import WebSocket from "ws";','import WebSocket from "ws";\nimport {spawnTool as spawn,findTool,validateSocket,closeChild} from "./windows-platform.js";');
+await patch('src/codex-rpc.ts','import type WebSocket from "ws";','import type WebSocket from "ws";\nimport {spawnTool as spawn,findTool,validateSocket,closeChild} from "./windows-platform.js";');
 const rpc=await fs.readFile(path.join(work,'src/codex-rpc.ts'),'utf8');
 const start=rpc.indexOf('export function findCodexBinary('),end=rpc.indexOf('\nexport class CodexAppServer',start);
 if(start<0||end<0)throw Error('Codex discovery boundary changed');
@@ -34,9 +34,7 @@ await patch('src/config.ts','  codexTransport: "socket",','  codexTransport: "st
 await patch('src/config.ts','codexTransport: r.codexTransport === "stdio" ? "stdio" : "socket",','codexTransport: r.codexTransport === "socket" ? "socket" : "stdio",');
 await patch('src/config.ts','    .default("socket")','    .default("stdio")');
 await patch('src/claude-peer.ts','import { execFile } from "node:child_process";','import {execTool as execFile,findTool} from "./windows-platform.js";');
-const claude=await fs.readFile(path.join(work,'src/claude-peer.ts'),'utf8'),a=claude.indexOf('function findClaude():'),b=claude.indexOf('\n/** Cap on transcript',a);
-if(a<0||b<0)throw Error('Claude discovery boundary changed');
-await fs.writeFile(path.join(work,'src/claude-peer.ts'),claude.slice(0,a)+'function findClaude():string|undefined { const bin=findTool("claude");return fs.existsSync(bin)?bin:undefined; }\n'+claude.slice(b));
+await patch('src/claude-peer.ts','function findClaude(): string | undefined {','function findClaude(): string | undefined {\n  if (process.platform === "win32") { const bin=findTool("claude");return fs.existsSync(bin)?bin:undefined; }');
 await fs.copyFile(path.join(windows,'adapters/platform.ts'),path.join(work,'src/windows-platform.ts'));
 await fs.copyFile(path.join(windows,'adapters/image-compress.ts'),path.join(work,'src/image-compress.ts'));
 await patch('src/client.js','  id: "wechat-clawbot",','  id: "wechat-clawbot-windows",');
