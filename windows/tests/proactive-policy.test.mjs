@@ -28,3 +28,10 @@ test('sharing instructions are personal, support real pictures, allow silence an
   const guidance=buildProactiveGuidance(c);assert.match(guidance,/不虚构/);assert.match(guidance,/来源/);assert.match(guidance,/图片/);
   assert.equal(buildProactiveGuidance({...c,proactiveEnabled:false}),'');
 });
+
+test('opportunities carry current program evidence rather than reusing historical no-response claims',()=>{
+  const c=normalizeProactive({proactiveEnabled:true,proactiveTopics:'探索',proactivePlace:'海淀'}),now=at('2026-10-09T19:00:00');
+  const text=buildOpportunityPrompt('nearby',c,now,[],{lastHumanAt:now-3600000,todaySent:0,todayFailed:0,todayEvaluations:6});
+  assert.match(text,/实际发送 0 份/);assert.match(text,/已评估 6 次/);assert.match(text,/定时简报是独立任务/);assert.match(text,/至少一次公开资料检索/);
+  assert.match(text,/不知道时可探索/);assert.match(text,/没有可信内容或用户明确拒绝时仍应安静跳过/);
+});

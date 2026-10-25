@@ -1,14 +1,15 @@
 function ProactiveFields({value:v,user,disabled,set,clear}) {
   const [status,setStatus]=useState(null),[error,setError]=useState(""),[preview,setPreview]=useState("");
   const commit=async(key,value)=>{try{await set(key,value);setError("");}catch{setError("设置未保存，请重试。");}};
-  const refresh=async()=>{try{const r=await fetch("/plugins/clawbot/proactive",{credentials:"same-origin"}),s=await r.json();if(!r.ok||!s.ok)throw Error();setStatus(s);}catch{setError("主动互动状态暂不可用。");}};
-  useEffect(()=>{void refresh();},[]);
+  const refresh=async()=>{try{const r=await fetch("/plugins/clawbot/proactive",{credentials:"same-origin"}),s=await r.json();if(!r.ok||!s.ok)throw Error();setStatus(s);setError("");}catch{setError("主动互动状态暂不可用。");}};
+  useEffect(()=>{void refresh();const timer=setInterval(()=>{void refresh();},30000);return()=>clearInterval(timer);},[]);
   const field=(key,label,hint,control,inline)=>Field({label,hint,disabled,control,inline,overridden:Object.hasOwn(user,key),onReset:()=>{void clear(key).catch(()=>setError("设置未保存"));}});
   const toggle=(key,label,hint,fallback)=>field(key,label,hint,null,h(Switch,{label,disabled,on:typeof v[key]==="boolean"?v[key]:fallback,onChange:next=>{void commit(key,next);}}));
   const placeholders={proactiveTopics:"填写你真正关心的主题，留空不分享行业资讯",proactivePlace:"常用城市与商圈，留空不推荐附近吃喝",proactiveStart:"10:00",proactiveEnd:"21:30"};
   const text=(key,label,hint,limit)=>field(key,label,hint,h(PersonalityText,{value:v[key]||"",field:key,label,disabled,commit,limit,placeholder:placeholders[key],multiline:key==="proactiveTopics"}));
   const number=(key,label,hint,fallback,min,max)=>field(key,label,hint,h("input",{className:S.input,type:"number","aria-label":label,disabled,min,max,step:1,value:v[key]??fallback,onChange:event=>{const n=Number(event.target.value);if(Number.isFinite(n))void commit(key,n);}}));
   const showRules=async()=>{try{const r=await fetch("/plugins/clawbot/proactive",{method:"POST",credentials:"same-origin",headers:{"x-clawbot-proactive-action":"preview"}}),s=await r.json();if(!r.ok||!s.ok)throw Error();setPreview(s.rules+"\n\n"+s.opportunity);}catch{setError("规则暂无法读取，请重试。");}};
+  const cancelTest=async()=>{try{const r=await fetch("/plugins/clawbot/proactive",{method:"POST",credentials:"same-origin",headers:{"x-clawbot-proactive-action":"cancel-test"}});if(!r.ok)throw Error();await refresh();}catch{setError("测试未能取消，请重试。");}};
   const names={industry:"行业分享",nearby:"附近吃喝",chat:"自然闲聊"},states={evaluating:"挑选中",sent:"已分享",skipped:"跳过",failed:"投递未确认",abandoned:"重启后未重发"};
   return h("section",{"aria-label":"主动互动与真实分享",style:{border:"1px solid var(--dsw-alias-border-l2)",borderRadius:10,padding:16,marginBottom:20}},
     h("p",{className:S.label,style:{marginTop:0}},"主动互动与真实分享"),
@@ -32,6 +33,11 @@ function ProactiveFields({value:v,user,disabled,set,clear}) {
       h("button",{type:"button",className:S.button,onClick:()=>{void refresh();}},"刷新状态"),
       h("button",{type:"button",className:S.button,onClick:()=>{void showRules();}},"查看分享规则（不发送）"),
       status?h("p",{className:S.hint,role:"status"},`${status.enabled?"已开启":"未开启"} · ${status.phase==="exploration"?"起步探索":"常规节奏"} · ${status.minMinutes}～${status.maxMinutes} 分钟随机考虑 · 每天最多 ${status.dailyLimit} 份 · ${status.reason}`):null,
+      status&&typeof status.todaySent==="number"?h("p",{className:S.hint},`今日实际分享 ${status.todaySent}/${status.dailyLimit} 份 · 跳过 ${status.todaySkipped} 次 · 投递未确认 ${status.todayFailed} 份 · 已评估 ${status.todayEvaluations}/${status.evaluationLimit} 次`):null,
+      status?.lastHumanAt?h("p",{className:S.hint},"最近微信来信："+new Date(status.lastHumanAt).toLocaleString()):null,
+      status?.lastResult&&status.lastResult!==status.reason?h("p",{className:S.hint},"上次调度结果："+status.lastResult):null,
+      status?.test?h("p",{className:S.hint,role:"status"},`${status.test.mode==="content"?"真实内容体验":"随机发送测试"}：${status.test.sent}/10 份接口确认 · ${status.test.status==="running"?"进行中":status.test.status==="cancelled"?"已取消":"已结束"} · 截止 ${new Date(status.test.deadlineAt).toLocaleTimeString()}`):null,
+      status?.test?.status==="running"?h("button",{type:"button",className:S.button,onClick:()=>{void cancelTest();}},"停止本轮发送测试"):null,
       status?.nextAt?h("p",{className:S.hint},"下一次可能评估："+new Date(status.nextAt).toLocaleString()):null,
       preview?h("pre",{style:{whiteSpace:"pre-wrap",fontSize:12}},preview):null,
       status?.history?.length?h("ul",null,status.history.map(row=>h("li",{key:row.id},

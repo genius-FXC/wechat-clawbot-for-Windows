@@ -1,0 +1,11 @@
+import {connection} from './paper-live.mjs';
+import os from 'node:os';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import fs from 'node:fs/promises';
+const rules=process.argv[2];if(!rules)throw Error('Provide the absolute path to your own paper-reading rules Markdown file');
+if(!path.isAbsolute(rules))throw Error('The paper-reading rules path must be absolute');await fs.access(rules);
+const c=await connection();
+const runtime=path.join(os.homedir(),'.cache/codex-runtimes/codex-primary-runtime/dependencies');
+await c.rpc('settings/update',{ns:'clawbot',patch:{papersEnabled:true,zoteroUrl:'http://127.0.0.1:23119',paperRulesPath:rules,paperPython:path.join(runtime,'python/python.exe'),paperRenderer:path.join(runtime,'native/poppler/Library/bin/pdftoppm.exe'),paperWorkspace:fileURLToPath(new URL('../../.local/papers/',import.meta.url))}});
+console.log('论文工作台设置已保存；原有性格、记忆与微信设置保留。');

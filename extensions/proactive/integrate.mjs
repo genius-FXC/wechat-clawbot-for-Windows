@@ -4,6 +4,7 @@ import {fileURLToPath} from 'node:url';
 const directory=fileURLToPath(new URL('./',import.meta.url));
 export async function integrateProactive(work,patch){
   for(const [from,to] of [['policy.ts','clawbot-proactive-policy.ts'],['engine.ts','clawbot-proactive-engine.ts'],['media.ts','clawbot-proactive-media.ts'],['runtime.ts','clawbot-proactive.ts'],['schema.ts','clawbot-proactive-schema.ts']])await fs.copyFile(path.join(directory,from),path.join(work,'src',to));
+  await fs.copyFile(path.join(directory,'send-test.ts'),path.join(work,'src/clawbot-proactive-send-test.ts'));
   await patch('src/config.ts','import Schema from "@deepseek-ai/schemastery";',
     'import Schema from "@deepseek-ai/schemastery";\nimport {DEFAULT_PROACTIVE,PROACTIVE_FIELDS,normalizeProactive,type ProactiveConfig} from "./clawbot-proactive-policy.js";\nimport {PROACTIVE_SCHEMA} from "./clawbot-proactive-schema.js";');
   await patch('src/config.ts','export interface ClawbotConfig extends PersonalityConfig, ClawbotMemoryConfig {','export interface ClawbotConfig extends PersonalityConfig, ClawbotMemoryConfig, ProactiveConfig {');
